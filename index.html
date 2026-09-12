@@ -1,0 +1,747 @@
+<!DOCTYPE html>
+<html lang="es-CO">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>LN-03 · Línea de soportes — SCADA integrado</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@400;600;700&display=swap" rel="stylesheet">
+<style>
+:root{--panel:#B9BEB6;--panel-edge:#6F7570;--panel-dark:#9AA096;--screen:#0D1417;--ink:#23271F;
+  --run:#3DD68C;--warn:#E8A33D;--fault:#E5484D;--info:#5AB0E8}
+*{box-sizing:border-box} html,body{margin:0;padding:0}
+body{background:repeating-linear-gradient(90deg,rgba(0,0,0,.03) 0 2px,transparent 2px 6px),var(--panel);
+  color:var(--ink);font-family:"IBM Plex Sans Condensed","Arial Narrow",system-ui,sans-serif;padding:14px}
+.tag{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.18em;text-transform:uppercase;color:#3A4038}
+header{border:2px solid var(--panel-edge);border-radius:3px;background:linear-gradient(180deg,#C6CBC3,#AEB4AB);
+  padding:10px 12px;box-shadow:inset 0 1px 0 #D8DCD5,0 2px 0 var(--panel-dark);
+  display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap}
+header h1{font-size:17px;margin:0;font-weight:700;line-height:1.1}
+header .sub{font-size:11px;color:#4A5048;margin-top:2px}
+.rol{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+  border:1px solid var(--panel-edge);border-radius:2px;padding:4px 8px;background:#DDE0DA}
+#ot{border:2px solid #B8791A;border-radius:4px;background:linear-gradient(180deg,#F7E6C8,#EFD9B4);
+  padding:10px 12px;margin-top:12px}
+#ot .cab{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:#8A5B12}
+#ot .car{display:flex;flex-wrap:wrap;gap:14px;font-family:"IBM Plex Mono",monospace;font-size:12px;margin-top:5px}
+#ot .car b{color:#4A3208}
+.grid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:12px}
+@media(min-width:1080px){.grid{grid-template-columns:1.4fr 1fr}}
+.screen{background:var(--screen);border:2px solid var(--panel-edge);border-radius:4px;
+  box-shadow:inset 0 0 0 3px #263033,inset 0 6px 24px rgba(0,0,0,.7);padding:10px;
+  color:#C9D6CF;font-family:"IBM Plex Mono",monospace}
+.screen .bar{display:flex;justify-content:space-between;align-items:center;font-size:10px;
+  letter-spacing:.14em;color:#6E7F77;margin-bottom:6px;gap:8px;flex-wrap:wrap}
+#lienzo{width:100%;height:340px;display:block;border-radius:2px;cursor:grab}
+#lienzo:active{cursor:grabbing}
+.card{border:2px solid var(--panel-edge);border-radius:4px;background:linear-gradient(180deg,#C6CBC3,#B3B9B0);
+  box-shadow:inset 0 1px 0 #D8DCD5;padding:10px 12px}
+.card h2{font-size:11px;letter-spacing:.18em;text-transform:uppercase;margin:0 0 8px;color:#3A4038;
+  font-family:"IBM Plex Mono",monospace;font-weight:500}
+.btns{display:flex;flex-wrap:wrap;gap:7px}
+button{font-family:"IBM Plex Sans Condensed",sans-serif;font-weight:700;font-size:12px;letter-spacing:.03em;
+  text-transform:uppercase;border:2px solid #5E645D;border-radius:3px;padding:7px 10px;cursor:pointer;
+  background:linear-gradient(180deg,#E4E7E1,#C2C7BF);color:#23271F;box-shadow:0 2px 0 #7E847C}
+button:active{transform:translateY(2px);box-shadow:0 0 0 #7E847C}
+button:focus-visible{outline:3px solid var(--info);outline-offset:2px}
+button.run{background:linear-gradient(180deg,#63E3A6,#25B573);border-color:#166B45;color:#062315}
+button.stop{background:linear-gradient(180deg,#F0797D,#D1373C);border-color:#7C1F22;color:#2A0708}
+button.act{background:linear-gradient(180deg,#8FD9F5,#4FA9CE);border-color:#1F6383;color:#04202E}
+button.ghost{background:linear-gradient(180deg,#CBD0C8,#B0B6AD)}
+button.mini{font-size:11px;padding:5px 8px}
+label.ctrl{display:block;margin:7px 0 0;font-size:12px;font-weight:600}
+label.ctrl .val{float:right;font-family:"IBM Plex Mono",monospace;font-size:12px}
+input[type=range]{width:100%;accent-color:#25B573;margin-top:3px}
+/* estaciones */
+.est{border:1px solid #8B918A;border-radius:3px;background:#C9CEC6;padding:8px 10px;margin-bottom:8px}
+.est.sel{border-color:#2E7D5B;box-shadow:0 0 0 1px #2E7D5B}
+.est .cab{display:flex;justify-content:space-between;align-items:baseline;gap:8px;cursor:pointer}
+.est .tg{font-family:"IBM Plex Mono",monospace;font-size:9.5px;letter-spacing:.1em;color:#4A5048}
+.est .nm{font-size:13px;font-weight:700}
+.est .st{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;padding:2px 6px;
+  border-radius:2px;background:#9AA096;color:#EDEFEA}
+.est .st.tr{background:#25B573;color:#062315} .est .st.bl{background:#E8A33D;color:#2A1B04}
+.est .st.ha{background:#5AB0E8;color:#04202E} .est .st.fa{background:#D1373C;color:#fff}
+.est .cad{font-family:"IBM Plex Mono",monospace;font-size:9.5px;color:#5A6058;margin-top:3px}
+.est .cuerpo{display:none;margin-top:6px}
+.est.abierta .cuerpo{display:block}
+.est .prog{height:5px;background:#9AA096;border:1px solid #7E847C;border-radius:2px;overflow:hidden;margin-top:5px}
+.est .prog i{display:block;height:100%;background:#25B573}
+.est .cuello{font-family:"IBM Plex Mono",monospace;font-size:9px;letter-spacing:.1em;color:#8C2F33;font-weight:700}
+/* recursos */
+.rec{display:grid;grid-template-columns:auto 1fr auto;gap:5px 8px;align-items:center;
+  font-family:"IBM Plex Mono",monospace;font-size:10.5px}
+.rec b{font-weight:600;color:#3A4038}
+.rec .tk{height:7px;background:#9AA096;border:1px solid #7E847C;border-radius:2px;overflow:hidden}
+.rec .tk i{display:block;height:100%;background:#25B573}
+.rec .v{text-align:right;min-width:70px}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:9px}
+@media(min-width:600px){.kpis{grid-template-columns:repeat(6,1fr)}}
+.kpi{background:#111B1E;border:1px solid #2C3A3E;border-radius:3px;padding:6px 7px}
+.kpi .k{font-family:"IBM Plex Mono",monospace;font-size:8.5px;letter-spacing:.08em;color:#6E7F77;text-transform:uppercase}
+.kpi .v{font-family:"IBM Plex Mono",monospace;font-size:16px;font-weight:600;color:#DCE9E1;line-height:1.3}
+.kpi .v small{font-size:9.5px;color:#7D8F86}
+.kpi.al .v{color:var(--warn)} .kpi.fa .v{color:var(--fault)} .kpi.ok .v{color:var(--run)}
+.estado{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chip{font-family:"IBM Plex Mono",monospace;font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+  border:1px solid #2E3A34;border-radius:2px;padding:3px 6px;color:#8FA39A;background:#111A16}
+.chip b{color:#D6E4DC;font-weight:500}
+.chip.on{border-color:var(--run);color:var(--run)}
+.chip.al{border-color:var(--warn);color:var(--warn)}
+.chip.fa{border-color:var(--fault);color:var(--fault)}
+.log{background:var(--screen);border:2px solid var(--panel-edge);border-radius:4px;padding:8px;height:150px;
+  overflow-y:auto;font-family:"IBM Plex Mono",monospace;font-size:11px;color:#9FB3A9}
+.log div{padding:1px 0;border-bottom:1px dotted #202B26}
+.log .t{color:#5F6F68} .log .fault{color:var(--fault)} .log .warn{color:var(--warn)}
+.log .ok{color:var(--run)} .log .info{color:var(--info)}
+#gate{position:fixed;inset:0;background:rgba(13,20,23,.95);z-index:99;display:flex;align-items:center;
+  justify-content:center;padding:16px}
+#gate .box{background:linear-gradient(180deg,#C6CBC3,#B0B6AD);border:2px solid var(--panel-edge);border-radius:4px;
+  box-shadow:0 8px 30px rgba(0,0,0,.5);padding:20px;max-width:470px;width:100%}
+#gate h3{margin:0 0 4px;font-size:20px} #gate p{margin:0 0 12px;font-size:13px;color:#3E443C;line-height:1.45}
+#gate input{width:100%;padding:8px;margin-top:4px;border:2px solid #5E645D;border-radius:3px;background:#DDE0DA;
+  font-family:"IBM Plex Mono",monospace;font-size:12px;color:#23271F}
+#gate .err{color:#8C2F33;font-size:12px;font-weight:700;min-height:16px;margin-top:6px}
+details.guia{margin-top:12px;border:2px solid var(--panel-edge);border-radius:4px;
+  background:linear-gradient(180deg,#C6CBC3,#B3B9B0);padding:8px 12px}
+details.guia summary{cursor:pointer;font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:#3A4038;font-weight:600}
+details.guia .cuerpo{font-size:13px;line-height:1.5;color:#2F3630;padding:8px 0 4px}
+details.guia h4{font-size:12px;margin:12px 0 4px;color:var(--panel-edge);text-transform:uppercase;letter-spacing:.08em}
+details.guia ul{margin:4px 0;padding-left:20px} details.guia li{margin:3px 0}
+.nota{font-size:12px;color:#3E443C;line-height:1.45;margin-top:8px}
+#fin{display:none;margin-top:10px;padding:10px 12px;border:2px solid #166B45;border-radius:3px;
+  background:#DDEFE6;font-size:13px;color:#12402C;line-height:1.6}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+<div id="gate"><div class="box">
+  <h3>Turno en la línea LN-03</h3>
+  <p>Ejercicio en grupo. Identifíquense: estos datos quedan en el reporte que genera el SCADA y son los que el instructor califica.</p>
+  <label class="ctrl" for="gGrupo">Nombre del grupo</label>
+  <input id="gGrupo" type="text" autocomplete="off" placeholder="Ej. Grupo 2 — Turno A">
+  <label class="ctrl" for="gFicha">Número de ficha</label>
+  <input id="gFicha" type="text" inputmode="numeric" autocomplete="off" placeholder="Ej. 2847391">
+  <label class="ctrl" for="gInteg">Integrantes y rol de cada uno</label>
+  <input id="gInteg" type="text" autocomplete="off" placeholder="Jefe de turno, operador de fluidos, operador CNC…">
+  <div class="err" id="gErr"></div>
+  <div class="btns" style="margin-top:12px"><button id="gOk" class="run">Iniciar turno</button></div>
+</div></div>
+
+<header>
+  <div>
+    <div class="tag">SENA · Automatización y gestión de la producción</div>
+    <h1>LN-03 · Línea de soportes estampados y mecanizados</h1>
+    <div class="sub">SCADA integrado — neumática, hidráulica, CNC y PLC sobre recursos compartidos</div>
+  </div>
+  <div class="rol" id="rolTag">Turno no iniciado</div>
+</header>
+
+<details class="guia">
+  <summary>Procedimiento del turno — abrir</summary>
+  <div class="cuerpo">
+    <p><b>Su turno:</b> fabricar tres órdenes de soportes metálicos con la línea de cuatro estaciones, sin exceder el presupuesto ni la demanda eléctrica contratada.</p>
+    <h4>La línea no son cuatro máquinas: es una sola</h4>
+    <ul>
+      <li>Cada estación entrega a la siguiente a través de un <b>buffer de 5 piezas</b>. Si una estación va lenta, la de arriba se bloquea con el buffer lleno y la de abajo se queda sin material.</li>
+      <li>El aire comprimido, la central hidráulica y la energía eléctrica son <b>recursos compartidos y limitados</b>. Exigir una estación le quita capacidad a las demás.</li>
+      <li>La línea produce al ritmo de su estación más lenta. El SCADA le señala cuál es. Acelerar cualquier otra solo genera inventario y gasta recursos.</li>
+    </ul>
+    <h4>Lo que se mide</h4>
+    <ul>
+      <li><b>Cumplimiento:</b> las tres órdenes completas.</li>
+      <li><b>Costo por pieza conforme:</b> incluye material, energía, herramental y el desperdicio.</li>
+      <li><b>OEE de línea</b> y de cada estación.</li>
+      <li><b>Demanda eléctrica:</b> pasar del techo contratado genera penalización.</li>
+    </ul>
+    <h4>Advertencia</h4>
+    <p>El cuello de botella cambia con cada orden. Lo que funcionó en la primera no va a funcionar en la tercera: hay que volver a diagnosticar.</p>
+  </div>
+</details>
+
+<div id="ot">
+  <div class="cab" id="otCab">Orden de trabajo</div>
+  <div class="car" id="otCar"></div>
+  <div class="btns" style="margin-top:8px">
+    <button id="btnOT" class="run">Liberar orden a producción</button>
+  </div>
+</div>
+
+<div class="grid">
+  <section class="screen">
+    <div class="bar"><span>MÍMICO DE LÍNEA — arrastre para girar</span><span id="reloj">TURNO 00:00</span></div>
+    <canvas id="lienzo"></canvas>
+    <div class="estado">
+      <span class="chip" id="chOT">OT <b>—</b></span>
+      <span class="chip" id="chProg">AVANCE <b>0 / 0</b></span>
+      <span class="chip" id="chMat">MATERIAL <b>0</b></span>
+      <span class="chip" id="chCuello">CUELLO DE BOTELLA <b>—</b></span>
+      <span class="chip" id="chAl">SIN ALARMAS</span>
+    </div>
+    <div class="kpis">
+      <div class="kpi"><div class="k">Conformes</div><div class="v" id="kOK">0</div></div>
+      <div class="kpi"><div class="k">Rechazo</div><div class="v" id="kNok">0</div></div>
+      <div class="kpi"><div class="k">Costo / pieza</div><div class="v" id="kCpp">—</div></div>
+      <div class="kpi"><div class="k">Gasto</div><div class="v" id="kGasto">0</div></div>
+      <div class="kpi"><div class="k">Demanda</div><div class="v" id="kKw">0<small> kW</small></div></div>
+      <div class="kpi"><div class="k">OEE línea</div><div class="v" id="kOEE">—<small>%</small></div></div>
+    </div>
+  </section>
+
+  <div>
+    <section class="card">
+      <h2>Mando general</h2>
+      <div class="btns">
+        <button id="btnMarcha" class="run">Marcha de línea</button>
+        <button id="btnParo" class="stop">Paro</button>
+        <button id="btnHerr" class="ghost mini">Cambiar herramienta</button>
+      </div>
+      <h2 style="margin-top:12px">Recursos compartidos</h2>
+      <div class="rec" id="recursos"></div>
+    </section>
+
+    <section class="card" style="margin-top:12px">
+      <h2>Estaciones</h2>
+      <div id="estaciones"></div>
+    </section>
+  </div>
+</div>
+
+<section class="card" style="margin-top:12px">
+  <h2>Historial y reporte</h2>
+  <div class="log" id="log"></div>
+  <div class="btns" style="margin-top:10px">
+    <button id="expMuestras">Descargar muestras.csv</button>
+    <button id="expEventos">Descargar eventos.csv</button>
+    <button id="expReporte">Descargar reporte_turno.csv</button>
+  </div>
+  <div id="fin"></div>
+  <p class="nota"><b>Para Power BI:</b> separador <b>;</b> y coma decimal. <b>muestras</b> trae una fila cada 30 segundos de planta con el estado y las consignas de las cuatro estaciones y los tres recursos. <b>eventos</b> trae paros, bloqueos, rechazos y cambios de herramienta. <b>reporte_turno</b> trae una fila por orden con producción, costos y OEE.</p>
+</section>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<script>
+(() => {
+"use strict";
+const $=id=>document.getElementById(id);
+const TICK=100, ACEL=4;                 // 1 s real = 4 s de planta
+const PRESUPUESTO=750000;              // COP para todo el turno
+const KW_CONTRATADO=32, PEN_KW=180000;  // penalización por exceder la demanda
+const CAP_AIRE=240;                     // Nl/min del compresor
+const COSTO={kwh:850, material:4200, herramienta:85000, aceite:120};
+
+/* ============ ÓRDENES DE TRABAJO ============
+   Cada una desplaza el cuello de botella a otra estación. */
+const OTS=[
+ {id:"OT-01", cliente:"Soporte estándar",  cant:55, esp:3, RaMax:6.3, profTotal:4, fuerzaMin:90},
+ {id:"OT-02", cliente:"Soporte reforzado", cant:45, esp:6, RaMax:6.3, profTotal:4, fuerzaMin:170},
+ {id:"OT-03", cliente:"Soporte de precisión", cant:40, esp:3, RaMax:3.2, profTotal:6, fuerzaMin:90}
+];
+
+/* ============ ESTACIONES ============ */
+const EST=[
+ {id:"E1", tag:"E1 · Alimentación y sujeción", tec:"Neumática",
+  cadena:"SQ-01 fin de carrera → PLC → cilindros 1A1 y 2A1",
+  ctrl:[{k:"p1", etq:"Presión de red", min:4, max:7, paso:0.1, ini:6, uni:" bar"},
+        {k:"v1", etq:"Velocidad de cilindros", min:30, max:100, paso:5, ini:80, uni:" %"}]},
+ {id:"E2", tag:"E2 · Prensa de conformado", tec:"Hidráulica",
+  cadena:"PT-02 presostato + TT-02 temperatura → PLC → bomba y válvula proporcional",
+  ctrl:[{k:"p2", etq:"Presión de trabajo", min:80, max:280, paso:5, ini:160, uni:" bar"},
+        {k:"q2", etq:"Caudal de bomba", min:30, max:100, paso:5, ini:70, uni:" %"},
+        {k:"e2", etq:"Enfriador de aceite", min:0, max:100, paso:10, ini:0, uni:" %"}]},
+ {id:"E3", tag:"E3 · Centro de mecanizado", tec:"CNC",
+  cadena:"Encoder de husillo + sonda → CNC → husillo y ejes",
+  ctrl:[{k:"n3", etq:"Velocidad de husillo", min:800, max:4000, paso:100, ini:2200, uni:" rpm"},
+        {k:"f3", etq:"Avance", min:60, max:500, paso:20, ini:260, uni:" mm/min"},
+        {k:"a3", etq:"Profundidad de pasada", min:0.5, max:3, paso:0.5, ini:2, uni:" mm"}]},
+ {id:"E4", tag:"E4 · Verificación y paletizado", tec:"PLC y visión",
+  cadena:"Cámara + LVDT → PLC → rechazador y paletizador",
+  ctrl:[{k:"v4", etq:"Ritmo de inspección", min:50, max:100, paso:10, ini:100, uni:" %"}]}
+];
+
+let IDENT={grupo:"",ficha:"",integrantes:""}, S=null, C={}, abierta="E1";
+
+function nuevoTurno(){
+  C={}; EST.forEach(e=>e.ctrl.forEach(c=>C[c.k]=c.ini));
+  S={ id:(IDENT.ficha||"SF")+"-"+new Date().toISOString().slice(0,16).replace(/[-:T]/g,""),
+    t:0, tp:0, iOT:0, fase:"ESPERA", terminado:false, marcha:false,
+    est:EST.map(()=>({estado:"ESPERA", tf:0, ciclo:0, hechas:0, tTrab:0, tParo:0, tBloq:0, tHambre:0})),
+    buf:[0,0,0], almacen:0, ok:0, nok:0, causas:{},
+    presionReal:6, tempAceite:28, kW:0, kWpico:0, penalizado:false,
+    desgaste:0, cambiosHerr:0, gasto:0, alarma:null,
+    muestras:[], eventos:[], reporte:[], proxM:0, gastoIni:0, tpIni:0, okIni:0, nokIni:0 };
+  $("log").innerHTML="";
+  log("info","Turno "+S.id+" · grupo "+IDENT.grupo+". Línea detenida.");
+}
+
+const mmss=s=>String(Math.floor(s/60)).padStart(2,"0")+":"+String(Math.floor(s%60)).padStart(2,"0");
+const num=(v,d=1)=>(isFinite(v)?v:0).toFixed(d).replace(".",",");
+const cop=v=>"$"+Math.round(v).toLocaleString("es-CO");
+const dec=v=>String(v).replace(".",",");
+function log(cls,msg){
+  const el=document.createElement("div");
+  el.innerHTML='<span class="t">'+mmss(S?S.tp:0)+'</span> <span class="'+cls+'">'+msg+'</span>';
+  $("log").prepend(el); while($("log").children.length>240) $("log").lastChild.remove();
+}
+const evento=(tipo,tag,det)=>S.eventos.push({t:S.tp, ot:OTS[S.iOT]?OTS[S.iOT].id:"—", tipo, tag, det});
+
+/* ============ MODELO DE LA LÍNEA ============ */
+function ciclos(){
+  const ot=OTS[S.iOT]||OTS[0];
+  // E1 neumática: la presión real puede ser menor que la consigna si el compresor no da
+  const t1 = 18*(100/C.v1)*Math.pow(6/Math.max(3.5,S.presionReal),1.5);
+  // E2 hidráulica: el espesor exige más trabajo de conformado
+  const fEsp = ot.esp===6 ? 1.35 : 1.0;
+  const t2 = 12 + 22*(100/C.q2)*fEsp;
+  // E3 CNC: pasadas según profundidad total y profundidad de pasada
+  const pas = Math.ceil(ot.profTotal/C.a3);
+  const t3 = 10 + (80/C.f3)*60*pas;
+  // E4 inspección
+  const t4 = 12*(100/C.v4);
+  return [t1,t2,t3,t4];
+}
+function fuerzaPrensa(){ return C.p2*80/100; }          // kN, área de 80 cm²
+function rugosidad(){ return 0.8 + C.f3/140 + S.desgaste/110; }   // µm Ra
+function demandaAire(){ return 260*(C.v1/100)*(C.p1/6); }         // Nl/min
+
+function proceso(){
+  const dt=TICK/1000*ACEL;
+  S.t+=TICK;
+  if(S.fase!=="PRODUCIENDO") return;
+  S.tp+=dt;
+  const ot=OTS[S.iOT];
+
+  /* --- recursos compartidos --- */
+  const dem=demandaAire();
+  S.presionReal = C.p1*Math.min(1, CAP_AIRE/Math.max(1,dem));
+  if(S.presionReal<4.5 && !S.avisoAire){
+    S.avisoAire=true;
+    log("warn","La red de aire cayó a "+num(S.presionReal,1)+" bar. El compresor no alcanza a reponer lo que E1 consume.");
+    evento("ALARMA","Red de aire","Presión insuficiente");
+  }
+  if(S.presionReal>=4.8) S.avisoAire=false;
+
+  const potHid = S.marcha ? C.p2*(60*C.q2/100)/600 : 0;      // kW
+  S.tempAceite += (potHid*0.55 - (S.tempAceite-25)*(0.30+C.e2*0.004))*dt/60;
+  const kwCompresor = Math.min(1,dem/CAP_AIRE)*7.5;
+  const kwHusillo   = S.est[2].estado==="TRABAJANDO" ? (C.n3/4000)*5.5 : 0.4;
+  const kwEnfriador = C.e2/100*2.2;
+  S.kW = (S.marcha?3:0.5) + kwCompresor + potHid + kwHusillo + kwEnfriador;
+  S.kWpico = Math.max(S.kWpico, S.kW);
+  if(S.kW>KW_CONTRATADO && !S.penalizado){
+    S.penalizado=true; S.gasto+=PEN_KW;
+    log("fault","DEMANDA EXCEDIDA · "+num(S.kW,1)+" kW sobre un contrato de "+KW_CONTRATADO+
+      " kW. Penalización de "+cop(PEN_KW)+".");
+    evento("PENALIZACION","Medidor","Demanda contratada excedida");
+  }
+  S.gasto += S.kW*COSTO.kwh*dt/3600;
+  S.gasto += (C.e2/100)*COSTO.aceite*dt/3600;
+
+  /* --- desgaste de herramienta --- */
+  if(S.est[2].estado==="TRABAJANDO"){
+    S.desgaste += (0.003 + (C.n3/4000)*0.016 + (C.f3/500)*0.014)*dt;
+    if(S.desgaste>=100 && !S.est[2].falla){
+      S.est[2].falla="Rotura de herramienta";
+      S.est[2].estado="FALLA";
+      log("fault","E3 · rotura de herramienta por desgaste total. La línea se detiene aquí hasta el cambio.");
+      evento("FALLA","E3","Rotura de herramienta");
+    }
+  }
+
+  /* --- avance de las estaciones, de la última a la primera --- */
+  const T=ciclos();
+  for(let i=3;i>=0;i--){
+    const e=S.est[i];
+    if(!S.marcha){ e.tParo+=dt; continue; }
+    if(e.estado==="FALLA"){ e.tParo+=dt; continue; }
+
+    if(e.estado==="TRABAJANDO"){
+      e.tTrab+=dt; e.tf+=dt;
+      if(e.tf>=e.ciclo){
+        // ¿hay espacio aguas abajo?
+        const salida = i<3 ? S.buf[i] : null;
+        if(i<3 && S.buf[i]>=5){ e.estado="BLOQUEADA"; continue; }
+        terminarPieza(i);
+      }
+      continue;
+    }
+    if(e.estado==="BLOQUEADA"){
+      e.tBloq+=dt;
+      if(S.buf[i]<5) terminarPieza(i);
+      continue;
+    }
+    // ESPERA o HAMBRE: ¿hay material aguas arriba y espacio aguas abajo?
+    const hayEntrada = i===0 ? S.almacen>0 : S.buf[i-1]>0;
+    const haySalida  = i===3 ? true : S.buf[i]<5;
+    if(hayEntrada && haySalida){
+      if(i===0) S.almacen--; else S.buf[i-1]--;
+      e.estado="TRABAJANDO"; e.tf=0; e.ciclo=T[i];
+      if(i===0) S.gasto+=COSTO.material;
+    } else {
+      e.estado = hayEntrada ? "BLOQUEADA" : "HAMBRE";
+      if(e.estado==="HAMBRE") e.tHambre+=dt; else e.tBloq+=dt;
+    }
+  }
+
+  /* --- alarmas --- */
+  let al=null;
+  if(S.est[2].falla) al="E3 detenida por herramienta";
+  else if(S.tempAceite>80) al="Aceite hidráulico crítico";
+  else if(S.tempAceite>68) al="Aceite hidráulico caliente";
+  else if(S.presionReal<4.5) al="Presión de aire baja";
+  else if(S.kW>KW_CONTRATADO*0.92) al="Demanda cerca del contrato";
+  else if(S.desgaste>80) al="Herramienta cerca del final";
+  if(al&&al!==S.alarma){ log("warn","ALARMA · "+al); evento("ALARMA","LN-03",al); }
+  S.alarma=al;
+  if(S.tempAceite>80 && S.est[1].estado!=="FALLA"){
+    S.est[1].estado="FALLA"; S.est[1].falla="Sobretemperatura del aceite";
+    log("fault","E2 · paro por aceite a "+num(S.tempAceite,0)+" °C. Suba el enfriador o baje la exigencia.");
+    evento("FALLA","E2","Sobretemperatura");
+  }
+  if(S.est[1].falla==="Sobretemperatura del aceite" && S.tempAceite<62){
+    S.est[1].falla=null; S.est[1].estado="ESPERA";
+    log("ok","E2 · el aceite volvió a temperatura de trabajo. Estación repuesta.");
+    evento("REPOSICION","E2","Temperatura normalizada");
+  }
+
+  /* --- historiador --- */
+  if(S.tp>=S.proxM){
+    S.proxM=S.tp+30;
+    S.muestras.push({t:Math.round(S.tp), ot:ot.id,
+      e:S.est.map(x=>x.estado[0]).join(""), buf:S.buf.slice(),
+      p1:C.p1, v1:C.v1, pr:S.presionReal, p2:C.p2, q2:C.q2, e2:C.e2, T:S.tempAceite,
+      n3:C.n3, f3:C.f3, a3:C.a3, v4:C.v4, des:S.desgaste,
+      kW:S.kW, ok:S.ok, nok:S.nok, gasto:S.gasto, aire:dem});
+  }
+  const vacia = S.almacen===0 && S.buf.every(b=>b===0) &&
+    S.est.every(e=>e.estado!=="TRABAJANDO" && e.estado!=="BLOQUEADA");
+  if(S.ok>=ot.cant || vacia) cerrarOT();
+}
+
+function terminarPieza(i){
+  const e=S.est[i], ot=OTS[S.iOT];
+  e.estado="ESPERA"; e.tf=0; e.hechas++;
+  if(i<3){ S.buf[i]++; return; }
+  // E4 decide la conformidad con lo que las estaciones anteriores hicieron
+  const F=fuerzaPrensa(), Ra=rugosidad();
+  let causa=null;
+  if(F<ot.fuerzaMin) causa="Conformado incompleto";
+  else if(Ra>ot.RaMax) causa="Rugosidad fuera de tolerancia";
+  else if(S.presionReal<4.6 && Math.random()<0.25) causa="Pieza mal posicionada";
+  if(causa){ S.nok++; S.causas[causa]=(S.causas[causa]||0)+1;
+    if(S.nok%5===1){ log("warn","Rechazo · "+causa+" (F="+num(F,0)+" kN, Ra="+num(Ra,1)+" µm)");
+      evento("RECHAZO","E4",causa); } }
+  else S.ok++;
+}
+
+function cuelloBotella(){
+  let idx=0, u=-1;
+  S.est.forEach((e,i)=>{ const tt=e.tTrab+e.tParo+e.tBloq+e.tHambre;
+    const util=tt>0?e.tTrab/tt:0; if(util>u){u=util;idx=i;} });
+  return {idx, util:u};
+}
+function oee(){
+  const tt=S.tp||1;
+  const tProd=S.est.reduce((a,e)=>a+e.tTrab,0)/4;
+  const A=Math.min(1,tProd/tt);
+  const ot=OTS[S.iOT]||OTS[0];
+  const ideal=40;                                        // s de ciclo de diseño de la línea
+  const R=tProd>0?Math.min(1,(ideal*(S.ok+S.nok))/tt):0;
+  const Q=(S.ok+S.nok)>0?S.ok/(S.ok+S.nok):0;
+  return {A,R,Q,oee:A*R*Q};
+}
+
+/* ============ ÓRDENES ============ */
+function mostrarOT(){
+  const ot=OTS[S.iOT];
+  if(!ot){ $("otCab").textContent="Turno terminado"; $("otCar").innerHTML=""; $("btnOT").disabled=true; return; }
+  $("otCab").textContent="Orden en cola · "+ot.id+" · "+ot.cliente;
+  $("otCar").innerHTML="Cantidad <b>"+ot.cant+" piezas</b>"+
+    "Espesor <b>"+ot.esp+" mm</b>"+
+    "Fuerza mínima de conformado <b>"+ot.fuerzaMin+" kN</b>"+
+    "Rugosidad máxima <b>Ra "+num(ot.RaMax,1)+" µm</b>"+
+    "Profundidad a mecanizar <b>"+ot.profTotal+" mm</b>";
+  $("btnOT").disabled=false;
+}
+$("btnOT").onclick=()=>{
+  if(S.fase==="PRODUCIENDO") return;
+  const ot=OTS[S.iOT];
+  S.almacen=Math.ceil(ot.cant*1.25); S.ok=0; S.nok=0; S.causas={};
+  S.buf=[0,0,0]; S.est.forEach(e=>{e.estado="ESPERA";e.tf=0;});
+  S.fase="PRODUCIENDO"; S.gastoIni=S.gasto; S.tpIni=S.tp;
+  log("info","Liberada "+ot.id+" — "+ot.cliente+": "+ot.cant+" piezas de "+ot.esp+" mm.");
+  evento("INICIO_OT",ot.id,ot.cliente);
+  $("btnOT").disabled=true; $("rolTag").textContent=ot.id+" en producción";
+};
+function cerrarOT(){
+  const ot=OTS[S.iOT], k=oee(), cb=cuelloBotella();
+  S.reporte.push({ot:ot.id, cliente:ot.cliente, ok:S.ok, nok:S.nok,
+    dur:S.tp-S.tpIni, gasto:S.gasto-S.gastoIni, cuello:EST[cb.idx].id,
+    A:k.A,R:k.R,Q:k.Q,oee:k.oee, kwPico:S.kWpico, herr:S.cambiosHerr,
+    causa:Object.entries(S.causas).sort((a,b)=>b[1]-a[1])[0]?.[0]||"—"});
+  log("ok",ot.id+" cerrada. "+S.ok+" conformes, "+S.nok+" rechazos. Cuello de botella: "+EST[cb.idx].id+".");
+  evento("FIN_OT",ot.id,"Cerrada");
+  S.iOT++; S.fase="ESPERA"; S.marcha=false;
+  if(S.iOT>=OTS.length) terminar(); else mostrarOT();
+}
+function terminar(){
+  S.terminado=true; S.fase="FIN";
+  const tOK=S.reporte.reduce((a,r)=>a+r.ok,0), tNok=S.reporte.reduce((a,r)=>a+r.nok,0);
+  const cpp=tOK>0?S.gasto/tOK:0, dentro=S.gasto<=PRESUPUESTO;
+  const k=oee();
+  log(dentro?"ok":"fault","FIN DEL TURNO. "+tOK+" conformes · "+cop(S.gasto)+" de "+cop(PRESUPUESTO));
+  const el=$("fin"); el.style.display="block";
+  el.innerHTML="<b>Turno terminado — "+IDENT.grupo+" · ficha "+IDENT.ficha+"</b><br>"+
+    "Órdenes cerradas: "+S.reporte.length+" de 3 &nbsp;·&nbsp; Conformes: "+tOK+" &nbsp;·&nbsp; Rechazos: "+tNok+"<br>"+
+    "Gasto: "+cop(S.gasto)+" de "+cop(PRESUPUESTO)+" &nbsp;·&nbsp; "+(dentro?"dentro del presupuesto":"PRESUPUESTO EXCEDIDO")+"<br>"+
+    "Costo por pieza conforme: "+cop(cpp)+" &nbsp;·&nbsp; Pico de demanda: "+num(S.kWpico,1)+" kW<br>"+
+    "OEE de línea: "+num(k.oee*100,0)+" % (D "+num(k.A*100,0)+" · R "+num(k.R*100,0)+" · C "+num(k.Q*100,0)+")<br>"+
+    "Cuellos de botella por orden: "+S.reporte.map(r=>r.ot+"→"+r.cuello).join(" · ")+"<br>"+
+    "Descarguen los tres archivos y entréguenlos sin modificarlos.";
+  $("rolTag").textContent="Turno terminado";
+}
+
+/* ============ ESCENA 3D ============ */
+let escena,camara,rend,piezas=[],maq={},orb={rx:0.55,ry:0.30,dist:52,ar:false,px:0,py:0};
+const XE=[-21,-7,7,21];
+function construir(){
+  const cv=$("lienzo");
+  escena=new THREE.Scene(); escena.fog=new THREE.Fog(0x0D1417,70,150);
+  camara=new THREE.PerspectiveCamera(40,2,0.5,300);
+  rend=new THREE.WebGLRenderer({canvas:cv,antialias:true});
+  rend.setClearColor(0x0D1417,1); rend.setPixelRatio(Math.min(devicePixelRatio,2));
+  escena.add(new THREE.AmbientLight(0x93a8a6,0.68));
+  const l=new THREE.DirectionalLight(0xffffff,0.86); l.position.set(12,26,18); escena.add(l);
+  const piso=new THREE.Mesh(new THREE.PlaneGeometry(110,50),new THREE.MeshLambertMaterial({color:0x1a2429}));
+  piso.rotation.x=-Math.PI/2; escena.add(piso);
+  const rejilla=new THREE.GridHelper(110,36,0x2b383d,0x222e33);
+  rejilla.position.y=0.02; escena.add(rejilla);
+  const gris=new THREE.MeshLambertMaterial({color:0x6d7a80});
+  const verde=new THREE.MeshLambertMaterial({color:0x2f7d5b});
+  const azul=new THREE.MeshLambertMaterial({color:0x3f6f9f});
+  const naranja=new THREE.MeshLambertMaterial({color:0xE8A33D});
+  const acero=new THREE.MeshLambertMaterial({color:0x8f9a97});
+  // banda
+  const banda=new THREE.Mesh(new THREE.BoxGeometry(56,0.5,3),new THREE.MeshLambertMaterial({color:0x2b3a3f}));
+  banda.position.set(0,2,0); escena.add(banda);
+  // estaciones
+  const cols=[naranja,azul,verde,gris];
+  XE.forEach((x,i)=>{
+    const base=new THREE.Mesh(new THREE.BoxGeometry(8,3.6,7),new THREE.MeshLambertMaterial({color:0x35464c}));
+    base.position.set(x,1.8,-5); escena.add(base);
+    const cuerpo=new THREE.Mesh(new THREE.BoxGeometry(6,4.4,5),cols[i]);
+    cuerpo.position.set(x,5.8,-5); escena.add(cuerpo);
+    maq["m"+i]=cuerpo;
+    // elemento distintivo
+    if(i===0){ const c=new THREE.Mesh(new THREE.CylinderGeometry(0.5,0.5,4,12),acero);
+      c.position.set(x,6,-1.6); c.rotation.x=Math.PI/2; escena.add(c); maq.cil=c; }
+    if(i===1){ const v=new THREE.Mesh(new THREE.BoxGeometry(2.4,3.4,2.4),acero);
+      v.position.set(x,5.6,-1.2); escena.add(v); maq.vastago=v; }
+    if(i===2){ const h=new THREE.Mesh(new THREE.CylinderGeometry(0.7,0.35,3.4,14),acero);
+      h.position.set(x,5.4,-1.2); escena.add(h); maq.husillo=h; }
+    if(i===3){ const cam=new THREE.Mesh(new THREE.BoxGeometry(1.4,1.4,1.8),acero);
+      cam.position.set(x,7.6,-1); escena.add(cam);
+      const lente=new THREE.Mesh(new THREE.CylinderGeometry(0.4,0.4,0.4,12),
+        new THREE.MeshBasicMaterial({color:0x5AB0E8}));
+      lente.position.set(x,6.7,-1); escena.add(lente); maq.lente=lente; }
+    // baliza
+    const bal=new THREE.Mesh(new THREE.CylinderGeometry(0.45,0.45,1.1,10),
+      new THREE.MeshBasicMaterial({color:0x22352C}));
+    bal.position.set(x-3.4,8.6,-5); escena.add(bal); maq["b"+i]=bal;
+  });
+  // buffers
+  for(let i=0;i<3;i++){
+    const bx=(XE[i]+XE[i+1])/2;
+    const pl=new THREE.Mesh(new THREE.BoxGeometry(4,0.3,3.4),new THREE.MeshLambertMaterial({color:0x3a4a50}));
+    pl.position.set(bx,2.3,0); escena.add(pl);
+    maq["buf"+i]=[];
+    for(let j=0;j<5;j++){
+      const p=new THREE.Mesh(new THREE.BoxGeometry(2.4,0.35,1.8),acero);
+      p.position.set(bx,2.7+j*0.42,0); p.visible=false; escena.add(p); maq["buf"+i].push(p);
+    }
+  }
+  for(let i=0;i<4;i++){
+    const p=new THREE.Mesh(new THREE.BoxGeometry(2.6,0.4,2),new THREE.MeshLambertMaterial({color:0xb9c0bd}));
+    p.visible=false; escena.add(p); piezas.push(p);
+  }
+  dimensionar(); addEventListener("resize",dimensionar);
+  cv.addEventListener("pointerdown",e=>{orb.ar=true;orb.px=e.clientX;orb.py=e.clientY;cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener("pointerup",()=>orb.ar=false);
+  cv.addEventListener("pointermove",e=>{ if(!orb.ar)return;
+    orb.ry+=(e.clientX-orb.px)*0.006; orb.rx=Math.max(0.15,Math.min(1.2,orb.rx+(e.clientY-orb.py)*0.005));
+    orb.px=e.clientX;orb.py=e.clientY;});
+  cv.addEventListener("wheel",e=>{e.preventDefault();
+    orb.dist=Math.max(26,Math.min(90,orb.dist+e.deltaY*0.05));},{passive:false});
+}
+function dimensionar(){
+  const cv=$("lienzo"),w=cv.clientWidth,h=cv.clientHeight||340;
+  rend.setSize(w,h,false); camara.aspect=w/h; camara.updateProjectionMatrix();
+}
+let reloj3=0;
+function dibujar(){
+  reloj3+=0.016;
+  camara.position.set(Math.sin(orb.ry)*Math.cos(orb.rx)*orb.dist,
+    3+Math.sin(orb.rx)*orb.dist, Math.cos(orb.ry)*Math.cos(orb.rx)*orb.dist);
+  camara.lookAt(0,4,-2);
+  const COL={ESPERA:0x22352C, TRABAJANDO:0x3DD68C, BLOQUEADA:0xE8A33D, HAMBRE:0x5AB0E8, FALLA:0xE5484D};
+  S.est.forEach((e,i)=>{ if(maq["b"+i]) maq["b"+i].material.color.setHex(COL[e.estado]||0x22352C); });
+  const t=S.est.map(e=>e.ciclo>0?e.tf/e.ciclo:0);
+  if(maq.cil) maq.cil.position.z = -1.6 + (S.est[0].estado==="TRABAJANDO"? Math.sin(t[0]*Math.PI)*2.2 : 0);
+  if(maq.vastago) maq.vastago.position.y = 5.6 - (S.est[1].estado==="TRABAJANDO"? Math.sin(t[1]*Math.PI)*2.0 : 0);
+  if(maq.husillo){ maq.husillo.rotation.y += S.est[2].estado==="TRABAJANDO" ? C.n3/2000*0.3 : 0;
+    maq.husillo.position.y = 5.4 - (S.est[2].estado==="TRABAJANDO"? Math.sin(t[2]*Math.PI)*1.4 : 0); }
+  if(maq.lente) maq.lente.material.color.setHex(S.est[3].estado==="TRABAJANDO"?0x3DD68C:0x5AB0E8);
+  for(let i=0;i<3;i++) for(let j=0;j<5;j++) maq["buf"+i][j].visible = j<S.buf[i];
+  S.est.forEach((e,i)=>{
+    const p=piezas[i];
+    p.visible = e.estado==="TRABAJANDO"||e.estado==="BLOQUEADA";
+    if(p.visible){ p.position.set(XE[i],3.1,-1.2);
+      p.scale.set(1,(OTS[S.iOT]?OTS[S.iOT].esp:3)/3,1); }
+  });
+  rend.render(escena,camara);
+}
+
+/* ============ INTERFAZ ============ */
+function pintarEstaciones(){
+  $("estaciones").innerHTML = EST.map((e,i)=>`
+   <div class="est ${abierta===e.id?"abierta":""}" id="est_${e.id}">
+     <div class="cab" data-e="${e.id}">
+       <div><div class="tg">${e.tec}</div><div class="nm">${e.tag}</div></div>
+       <div style="text-align:right"><span class="st" id="st_${e.id}">—</span>
+         <div class="cuello" id="cb_${e.id}"></div></div>
+     </div>
+     <div class="cad">${e.cadena}</div>
+     <div class="prog"><i id="pg_${e.id}" style="width:0%"></i></div>
+     <div class="cuerpo">
+       ${e.ctrl.map(c=>`<label class="ctrl">${c.etq} <span class="val"><span id="v_${c.k}">${c.ini}</span>${c.uni}</span>
+         <input type="range" id="i_${c.k}" min="${c.min}" max="${c.max}" step="${c.paso}" value="${c.ini}"></label>`).join("")}
+       <div class="nota" id="nt_${e.id}"></div>
+     </div>
+   </div>`).join("");
+  document.querySelectorAll("[data-e]").forEach(d=>d.onclick=()=>{
+    abierta = abierta===d.dataset.e ? "" : d.dataset.e;
+    document.querySelectorAll(".est").forEach(x=>x.classList.remove("abierta"));
+    if(abierta) $("est_"+abierta).classList.add("abierta");
+  });
+  EST.forEach(e=>e.ctrl.forEach(c=>{
+    $("i_"+c.k).addEventListener("input",ev=>{
+      C[c.k]=+ev.target.value; $("v_"+c.k).textContent=num(C[c.k], c.paso<1?1:0);
+    });
+  }));
+}
+function pintar(){
+  const k=oee(), cb=cuelloBotella(), ot=OTS[S.iOT]||OTS[OTS.length-1];
+  $("reloj").textContent="TURNO "+mmss(S.t/1000);
+  $("chOT").innerHTML="OT <b>"+(S.fase==="FIN"?"terminadas":(OTS[S.iOT]?OTS[S.iOT].id:"—"))+"</b>";
+  $("chProg").innerHTML="AVANCE <b>"+S.ok+" / "+ot.cant+" conformes</b>";
+  $("chMat").innerHTML="MATERIAL <b>"+S.almacen+" láminas</b>";
+  $("chCuello").innerHTML="CUELLO DE BOTELLA <b>"+(S.tp>60?EST[cb.idx].id+" · "+num(cb.util*100,0)+" %":"—")+"</b>";
+  $("chCuello").className="chip "+(S.tp>60?"al":"");
+  const ca=$("chAl"); ca.textContent=S.alarma?("ALARMA: "+S.alarma):"SIN ALARMAS";
+  ca.className="chip "+(S.est.some(e=>e.falla)?"fa":(S.alarma?"al":""));
+
+  $("kOK").textContent=S.ok; $("kNok").textContent=S.nok;
+  $("kCpp").textContent=S.ok>0?cop(S.gasto/S.ok).replace("$",""):"—";
+  $("kGasto").textContent=cop(S.gasto).replace("$","");
+  $("kKw").innerHTML=num(S.kW,1)+"<small> kW</small>";
+  $("kOEE").innerHTML=num(k.oee*100,0)+"<small>%</small>";
+  $("kGasto").parentElement.className="kpi "+(S.gasto>PRESUPUESTO?"fa":(S.gasto>PRESUPUESTO*0.8?"al":"ok"));
+  $("kKw").parentElement.className="kpi "+(S.kW>KW_CONTRATADO?"fa":(S.kW>KW_CONTRATADO*0.92?"al":""));
+
+  $("recursos").innerHTML=[
+    ["Aire comprimido", demandaAire()/CAP_AIRE, num(demandaAire(),0)+" / "+CAP_AIRE+" Nl/min"],
+    ["Presión real", S.presionReal/7, num(S.presionReal,1)+" bar"],
+    ["Aceite hidráulico", S.tempAceite/90, num(S.tempAceite,0)+" °C"],
+    ["Demanda eléctrica", S.kW/KW_CONTRATADO, num(S.kW,1)+" / "+KW_CONTRATADO+" kW"],
+    ["Desgaste de herramienta", S.desgaste/100, num(S.desgaste,0)+" %"]
+  ].map(([n,f,v])=>{
+    const pc=Math.max(0,Math.min(100,f*100));
+    const col=pc>90?"#D1373C":(pc>75?"#E8A33D":"#25B573");
+    return '<b>'+n+'</b><span class="tk"><i style="width:'+pc+'%;background:'+col+'"></i></span><span class="v">'+v+'</span>';
+  }).join("");
+
+  const T=ciclos();
+  S.est.forEach((e,i)=>{
+    const id=EST[i].id, st=$("st_"+id);
+    const map={ESPERA:["ESPERA",""],TRABAJANDO:["TRABAJANDO","tr"],BLOQUEADA:["BLOQUEADA","bl"],
+               HAMBRE:["SIN MATERIAL","ha"],FALLA:["FALLA","fa"]};
+    const [txt,cls]=map[e.estado]||["—",""];
+    st.textContent=txt; st.className="st "+cls;
+    $("pg_"+id).style.width=(e.ciclo>0?Math.min(100,e.tf/e.ciclo*100):0)+"%";
+    $("cb_"+id).textContent = (S.tp>60 && i===cb.idx) ? "CUELLO" : "";
+    const nt=$("nt_"+id);
+    if(i===0) nt.textContent="Ciclo "+num(T[0],1)+" s · consume "+num(demandaAire(),0)+" Nl/min de los "+CAP_AIRE+" disponibles.";
+    if(i===1) nt.textContent="Ciclo "+num(T[1],1)+" s · fuerza "+num(fuerzaPrensa(),0)+" kN (la orden exige "+ot.fuerzaMin+" kN).";
+    if(i===2) nt.textContent="Ciclo "+num(T[2],1)+" s · "+Math.ceil(ot.profTotal/C.a3)+" pasadas · Ra estimada "+num(rugosidad(),1)+" µm (máximo "+num(ot.RaMax,1)+").";
+    if(i===3) nt.textContent="Ciclo "+num(T[3],1)+" s · nunca es el cuello de botella: la inspección no limita la línea.";
+  });
+  $("btnMarcha").textContent=S.marcha?"Línea en marcha":"Marcha de línea";
+  $("btnMarcha").className=S.marcha?"ghost":"run";
+}
+$("btnMarcha").onclick=()=>{
+  if(S.fase!=="PRODUCIENDO"){ log("warn","Libere una orden a producción antes de dar marcha."); return; }
+  S.marcha=true; log("ok","Línea en marcha."); evento("MANDO","LN-03","Marcha");
+};
+$("btnParo").onclick=()=>{ if(!S.marcha) return; S.marcha=false;
+  log("info","Paro de línea solicitado."); evento("MANDO","LN-03","Paro"); };
+$("btnHerr").onclick=()=>{
+  if(S.marcha){ log("warn","Detenga la línea para cambiar la herramienta."); return; }
+  S.desgaste=0; S.cambiosHerr++; S.gasto+=COSTO.herramienta;
+  if(S.est[2].falla){ S.est[2].falla=null; S.est[2].estado="ESPERA"; }
+  S.tp+=180;
+  log("ok","Herramienta cambiada. Costo "+cop(COSTO.herramienta)+" y 3 minutos de parada.");
+  evento("MANTENIMIENTO","E3","Cambio de herramienta");
+};
+
+/* ============ EXPORTACIÓN ============ */
+function csv(nombre,cab,filas){
+  const txt="\uFEFF"+cab.join(";")+"\n"+filas.map(f=>f.join(";")).join("\n");
+  const url=URL.createObjectURL(new Blob([txt],{type:"text/csv;charset=utf-8"}));
+  const a=document.createElement("a"); a.href=url; a.download=nombre; a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),2000);
+}
+const ID3=()=>[IDENT.grupo,IDENT.ficha,S.id];
+$("expMuestras").onclick=()=>csv("muestras_"+S.id+".csv",
+ ["grupo","ficha","turno_id","segundo_planta","orden","estados","buffer1","buffer2","buffer3",
+  "presion_consigna_bar","velocidad_cilindros_pct","presion_real_bar","presion_prensa_bar","caudal_bomba_pct",
+  "enfriador_pct","temp_aceite_c","husillo_rpm","avance_mm_min","profundidad_mm","ritmo_inspeccion_pct",
+  "desgaste_herr_pct","demanda_kw","aire_nl_min","acum_ok","acum_rechazo","gasto_cop"],
+ S.muestras.map(m=>[...ID3(),m.t,m.ot,m.e,m.buf[0],m.buf[1],m.buf[2],
+  dec(m.p1.toFixed(1)),m.v1,dec(m.pr.toFixed(2)),m.p2,m.q2,m.e2,dec(m.T.toFixed(1)),
+  m.n3,m.f3,dec(m.a3.toFixed(1)),m.v4,dec(m.des.toFixed(1)),dec(m.kW.toFixed(2)),
+  dec(m.aire.toFixed(0)),m.ok,m.nok,Math.round(m.gasto)]));
+$("expEventos").onclick=()=>csv("eventos_"+S.id+".csv",
+ ["grupo","ficha","turno_id","segundo_planta","orden","tipo","estacion","detalle"],
+ S.eventos.map(e=>[...ID3(),Math.round(e.t),e.ot,e.tipo,e.tag,e.det]));
+$("expReporte").onclick=()=>csv("reporte_turno_"+S.id+".csv",
+ ["grupo","ficha","turno_id","integrantes","orden","producto","conformes","rechazos","duracion_s",
+  "gasto_orden_cop","cuello_botella","causa_rechazo_principal","disponibilidad_pct","rendimiento_pct",
+  "calidad_pct","oee_pct","pico_kw","cambios_herramienta","presupuesto_cop","kw_contratado"],
+ S.reporte.map(r=>[...ID3(),IDENT.integrantes,r.ot,r.cliente,r.ok,r.nok,Math.round(r.dur),
+  Math.round(r.gasto),r.cuello,r.causa,dec((r.A*100).toFixed(1)),dec((r.R*100).toFixed(1)),
+  dec((r.Q*100).toFixed(1)),dec((r.oee*100).toFixed(1)),dec(r.kwPico.toFixed(1)),r.herr,
+  PRESUPUESTO,KW_CONTRATADO]));
+
+/* ============ ARRANQUE ============ */
+$("gOk").onclick=()=>{
+  const g=$("gGrupo").value.trim(), f=$("gFicha").value.trim(), i=$("gInteg").value.trim();
+  if(g.length<3){ $("gErr").textContent="Escriban el nombre del grupo."; return; }
+  if(!/^[0-9]{4,10}$/.test(f)){ $("gErr").textContent="La ficha debe tener entre 4 y 10 dígitos."; return; }
+  if(i.length<5){ $("gErr").textContent="Escriban los integrantes y su rol."; return; }
+  IDENT={grupo:g,ficha:f,integrantes:i};
+  $("gate").style.display="none";
+  nuevoTurno(); pintarEstaciones(); mostrarOT();
+  $("rolTag").textContent="Grupo: "+g;
+};
+$("gInteg").addEventListener("keydown",e=>{ if(e.key==="Enter") $("gOk").click(); });
+
+construir(); nuevoTurno(); pintarEstaciones();
+setInterval(()=>{ if(!S.terminado) proceso(); pintar(); },TICK);
+(function animar(){ requestAnimationFrame(animar); dibujar(); })();
+})();
+</script>
+</body>
+</html>
